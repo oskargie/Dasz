@@ -1,0 +1,680 @@
+<title>Puchar Mioteł</title>
+<meta name="description" content="Wyścig na miotłach dla 1-4 graczy z klas 1-2: przeczytaj zadanie i przeleć przez obręcz z właściwym słowem.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Lilita+One&display=swap">
+<style>
+/* Układ: wyścig o zachodzie słońca nad zamkiem — każdy gracz ma swój pas nieba; po lewej tabliczka z zadaniem i przyciski, po prawej lot. Jeden wygląd, celowo bez trybu jasnego. */
+:root{
+  --dusk:#1e1430; --plum:#2e1f48; --plum-2:#3d2a5e; --line:#58427f;
+  --cream:#fff8ec; --ink:#24163a; --ink-soft:#6a5a86;
+  --sun:#ffb347; --gold:#ffd166; --ok:#2fa866; --bad:#e0524f;
+  --text:#f6efff; --text-soft:#c3b4de;
+  --f-display:"Lilita One","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  --f-read:"Andika","Verdana","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;background:var(--dusk);color:var(--text);font-family:var(--f-read);font-size:18px;line-height:1.5;
+  background-image:linear-gradient(180deg,#1e1430 0%,#2e1f48 55%,#5a2f55 100%);background-attachment:fixed}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;margin:0;line-height:1.1;text-wrap:balance;letter-spacing:.01em}
+.app{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:18px 32px}
+.eyebrow{font-family:var(--f-display);letter-spacing:.1em;text-transform:uppercase;font-size:14px;color:var(--sun)}
+
+/* ---------- Start ---------- */
+.setup{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:28px;align-items:start}
+.hero h1{font-size:clamp(52px,8vw,96px);color:var(--gold);text-shadow:0 5px 0 #b0582c,0 14px 40px rgba(255,179,71,.35)}
+.hero .sub{font-size:clamp(20px,2.4vw,24px);margin:8px 0 18px;color:var(--text)}
+.demo{width:100%;max-width:560px;height:auto;display:block;border-radius:22px;border:2px solid var(--line)}
+.how{display:grid;gap:10px;margin:18px 0 0;padding:0;list-style:none;counter-reset:s}
+.how li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start;color:var(--text-soft)}
+.how li::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--plum-2);color:var(--gold);font-family:var(--f-display)}
+.panel{background:var(--cream);color:var(--ink);border-radius:24px;padding:22px;display:grid;gap:16px;box-shadow:0 18px 44px rgba(0,0,0,.4)}
+.panel h2{font-size:22px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{flex:1 1 0;min-width:0;padding:10px 8px;border-radius:14px;border:3px solid #eadfcb;background:#fff;color:var(--ink);font-family:var(--f-display);font-size:22px}
+.seg button small{display:block;font-family:var(--f-read);font-size:14px;color:var(--ink-soft)}
+.seg button[aria-pressed="true"]{border-color:var(--sun);background:#fff1da}
+.names{display:grid;gap:8px}
+.name-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center}
+.name-row input{width:100%;padding:9px 12px;border-radius:12px;border:2px solid #eadfcb;background:#fff;color:var(--ink);font-size:19px}
+.keys{display:flex;gap:4px}
+kbd{display:inline-grid;place-items:center;min-width:30px;height:30px;padding:0 6px;border-radius:8px;background:var(--ink);color:#fff;font-family:var(--f-read);font-weight:700;font-size:15px;box-shadow:0 3px 0 #0e0818}
+.dot{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--ink);flex:none}
+.big{border:0;border-radius:18px;padding:15px 24px;background:var(--sun);color:var(--ink);font-family:var(--f-display);font-size:26px;box-shadow:0 5px 0 #b0582c;transition:transform .1s}
+.big:hover{transform:translateY(-2px)}
+.big:active{transform:translateY(3px);box-shadow:0 2px 0 #b0582c}
+.ghost{border:2px solid var(--line);background:transparent;color:var(--text);border-radius:14px;padding:9px 16px;font-family:var(--f-display);font-size:18px}
+.note{font-size:15px;color:var(--ink-soft);margin:0}
+
+/* ---------- Wyścig ---------- */
+.racebar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;margin-bottom:12px}
+.racebar h1{font-size:30px;color:var(--gold)}
+.map{position:relative;height:34px}
+.map .track{position:absolute;left:0;right:22px;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:var(--plum-2)}
+.map .tick{position:absolute;top:50%;width:4px;height:14px;margin:-7px 0 0 -2px;border-radius:2px;background:var(--line)}
+.map .flag{position:absolute;right:0;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:4px;
+  background:repeating-conic-gradient(#fff 0 25%,#24163a 0 50%) 0 0/11px 11px}
+.map .who{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:3px solid #fff;transition:none}
+.bar-btns{display:flex;gap:8px}
+.lanes{position:relative;display:grid;gap:8px}
+.lane{display:grid;grid-template-columns:240px minmax(0,1fr);border-radius:18px;overflow:hidden;border:2px solid var(--line);background:var(--plum)}
+.lp{display:grid;grid-template-rows:auto 1fr auto;gap:6px;padding:10px 12px;background:var(--cream);color:var(--ink);border-left:8px solid var(--pc)}
+.lp-name{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;min-width:0}
+.lp-name span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lp-name .stars{margin-left:auto;display:inline-flex;align-items:center;gap:3px;color:#b7791f;font-variant-numeric:tabular-nums}
+.task{display:grid;align-content:center;min-height:0}
+.task .k{font-size:15px;color:var(--ink-soft);line-height:1.25}
+.task .w{font-weight:700;font-size:clamp(24px,2.6vw,32px);line-height:1.15;overflow-wrap:anywhere}
+.task.good .w{color:var(--ok)}
+.task.bad .w{color:var(--bad)}
+.ctrls{display:flex;gap:8px}
+.ctrls button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:6px;border-radius:12px;border:0;background:var(--ink);color:#fff;
+  font-size:13px;box-shadow:0 3px 0 #0e0818;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.ctrls button:active{transform:translateY(2px);box-shadow:0 1px 0 #0e0818}
+.ctrls svg{width:22px;height:22px}
+canvas.sky{display:block;width:100%;height:clamp(120px,calc((100dvh - 150px) / var(--n)),230px);touch-action:none;cursor:pointer}
+.count{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-family:var(--f-display);
+  font-size:clamp(90px,16vw,200px);color:var(--gold);text-shadow:0 6px 0 #b0582c,0 0 40px rgba(0,0,0,.5)}
+.count span{animation:zoom .9s ease-out both}
+@keyframes zoom{from{transform:scale(1.6);opacity:0}30%{opacity:1}to{transform:scale(1)}}
+
+/* ---------- Okna ---------- */
+.overlay{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:16px;background:rgba(18,10,30,.78)}
+.modal{width:100%;max-width:640px;max-height:calc(100% - 8px);overflow:auto;background:var(--cream);color:var(--ink);border-radius:26px;padding:24px;display:grid;gap:16px;
+  box-shadow:0 30px 60px rgba(0,0,0,.5);animation:pop .22s ease-out}
+@keyframes pop{from{transform:scale(.94);opacity:.4}}
+.modal h2{font-size:clamp(34px,5vw,46px);color:#b0582c}
+.modal p{margin:0;font-size:19px}
+.podium{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.podium li{display:grid;grid-template-columns:52px 30px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px 14px;border-radius:16px;background:#fff;border:2px solid #eadfcb;font-size:19px}
+.podium li.first{border-color:var(--gold);background:#fff4d6}
+.podium .place{font-family:var(--f-display);font-size:28px;color:var(--ink-soft);text-align:center}
+.podium li.first .place{color:#b7791f}
+.podium .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium .t,.podium .s{font-variant-numeric:tabular-nums;white-space:nowrap}
+.podium .s{color:#b7791f;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.cup{width:64px;height:64px}
+.reader{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:16px;background:#efe6ff;font-size:18px}
+.row{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:center}
+.soft{border:2px solid #eadfcb;background:#fff;color:var(--ink);border-radius:14px;padding:10px 16px;font-weight:700}
+.review{display:grid;gap:4px;font-size:17px;color:var(--ink-soft);max-height:180px;overflow:auto;padding-right:4px}
+.review b{color:var(--ink)}
+
+@media (max-width:900px){
+  .setup{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:700px){
+  .lane{grid-template-columns:minmax(0,1fr)}
+  .lp{grid-template-rows:auto;grid-template-columns:minmax(0,1fr) auto;border-left-width:0;border-top:6px solid var(--pc)}
+  .lp-name{grid-column:1 / -1}
+  .ctrls button{padding:8px 14px}
+  .racebar{grid-template-columns:minmax(0,1fr) auto}
+  .racebar .map{grid-column:1 / -1;grid-row:2}
+  .podium li{grid-template-columns:40px 26px minmax(0,1fr) auto;font-size:17px}
+  .podium .t{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .count span,.modal{animation:none}
+  .big{transition:none}
+}
+</style>
+
+<div class="app">
+  <!-- START -->
+  <section id="setup" class="setup">
+    <div class="hero">
+      <div class="eyebrow">Wyścig czytania · klasy 1-2 · 1-4 graczy</div>
+      <h1>Puchar Mioteł</h1>
+      <p class="sub">Leć nad zamkiem i przelatuj przez obręcze z właściwym słowem.</p>
+      <canvas id="demo" class="demo" width="560" height="200" aria-label="Czarodziej na miotle leci do obręczy ze słowami"></canvas>
+      <ol class="how">
+        <li>Każdy gracz ma swój pas nieba. Na tabliczce obok jest zadanie, np. „Leć przez słowo: kot”.</li>
+        <li>Wybierz górną, środkową albo dolną obręcz: strzałkami, klawiszami albo dotykając obręczy.</li>
+        <li>Dobra obręcz daje gwiazdkę i przyspieszenie. Zła tylko na chwilę spowalnia.</li>
+        <li>Puchar dostaje ten, kto pierwszy doleci do mety.</li>
+      </ol>
+    </div>
+
+    <div class="panel">
+      <h2>Ilu zawodników?</h2>
+      <div class="seg" id="count-seg">
+        <button type="button" data-count="1" aria-pressed="false">1<small>trening</small></button>
+        <button type="button" data-count="2" aria-pressed="true">2</button>
+        <button type="button" data-count="3" aria-pressed="false">3</button>
+        <button type="button" data-count="4" aria-pressed="false">4</button>
+      </div>
+      <div class="names" id="names"></div>
+      <h2>Poziom czytania</h2>
+      <div class="seg" id="level-seg">
+        <button type="button" data-level="1" aria-pressed="true">Klasa 1<small>słowa i grupy</small></button>
+        <button type="button" data-level="2" aria-pressed="false">Klasa 2<small>rymy i przeciwieństwa</small></button>
+      </div>
+      <h2>Prędkość</h2>
+      <div class="seg" id="speed-seg">
+        <button type="button" data-speed="9" aria-pressed="true">Spokojnie<small>więcej czasu</small></button>
+        <button type="button" data-speed="6" aria-pressed="false">Szybko<small>dla wprawnych</small></button>
+      </div>
+      <h2>Długość wyścigu</h2>
+      <div class="seg" id="len-seg">
+        <button type="button" data-len="8" aria-pressed="true">8 obręczy</button>
+        <button type="button" data-len="12" aria-pressed="false">12 obręczy</button>
+      </div>
+      <button type="button" class="big" id="start-btn">Na miotły!</button>
+      <p class="note">Na tablecie każdy dotyka swojego pasa nieba: górnej, środkowej albo dolnej części.</p>
+    </div>
+  </section>
+
+  <!-- WYŚCIG -->
+  <section id="race" hidden>
+    <div class="racebar">
+      <h1>Puchar Mioteł</h1>
+      <div class="map" id="map"></div>
+      <div class="bar-btns">
+        <button type="button" class="ghost" id="sound-btn" aria-pressed="true">Dźwięk: tak</button>
+        <button type="button" class="ghost" id="pause-btn">Pauza</button>
+      </div>
+    </div>
+    <div class="lanes" id="lanes">
+      <div class="count" id="count" hidden></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+</div>
+
+<script>
+(() => {
+  // ---------- Słowa i zadania ----------
+  const EXACT_1 = [['kot','koc','kos'],['dom','dym','dach'],['lis','las','lot'],['mama','mapa','masa'],['nos','noc','nas'],['ser','sen','sok'],
+    ['koza','kosa','kasa'],['pies','piec','pięć'],['mak','rak','ptak'],['ryba','rura','ruda'],['lew','lek','len'],['buda','buty','bułka']];
+  const EXACT_2 = [['smok','smak','skok'],['kasza','kaczka','kasztan'],['korona','korale','kolano'],['latarnia','latawiec','lampa'],
+    ['miotła','miotły','motyl'],['czapka','czapla','łapka'],['szafa','szafka','szarfa'],['rower','rowek','robak'],['zamek','ząbek','zameczek'],['mleko','młotek','mydło']];
+  const CATS = [
+    { acc: 'zwierzę',  lvl: 1, words: ['kot','pies','koń','lis','sowa','żaba','krowa','mysz','kura','ryba','owca','kaczka'] },
+    { acc: 'owoc',     lvl: 1, words: ['jabłko','gruszka','śliwka','banan','wiśnia','cytryna','malina'] },
+    { acc: 'kolor',    lvl: 1, words: ['czerwony','zielony','żółty','niebieski','biały','czarny','różowy'] },
+    { acc: 'zabawkę',  lvl: 1, words: ['piłka','lalka','klocki','bączek','skakanka','latawiec'] },
+    { acc: 'pojazd',   lvl: 2, words: ['auto','rower','statek','pociąg','samolot','tramwaj','autobus'] },
+    { acc: 'mebel',    lvl: 2, words: ['stół','krzesło','szafa','łóżko','półka','fotel'] },
+    { acc: 'warzywo',  lvl: 2, words: ['marchew','ogórek','pomidor','cebula','ziemniak','groszek'] },
+  ];
+  const RHYMES = [['kot','płot'],['smok','skok'],['rak','ptak'],['sowa','krowa'],['ryba','szyba'],['noga','droga'],
+    ['kura','góra'],['las','czas'],['kosz','grosz'],['miś','ryś'],['lody','wody'],['kwiat','świat']];
+  const OPPOSITES = [['duży','mały'],['gorący','zimny'],['dzień','noc'],['wysoki','niski'],['szybki','wolny'],['stary','młody'],
+    ['jasny','ciemny'],['pełny','pusty'],['wesoły','smutny'],['gruby','chudy'],['długi','krótki'],['mokry','suchy']];
+
+  const rand = n => Math.floor(Math.random() * n);
+  const pick = a => a[rand(a.length)];
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function makeTask(kind, level) {
+    if (kind === 'exact') {
+      const grp = pick(level === 1 ? EXACT_1 : EXACT_2.concat(EXACT_1));
+      const target = pick(grp);
+      return { k: 'Leć przez słowo:', big: target, answer: target, words: shuffle(grp) };
+    }
+    if (kind === 'cat') {
+      const cats = CATS.filter(c => c.lvl <= level);
+      const [c, o1, o2] = shuffle(cats);
+      const answer = pick(c.words);
+      // inne grupy nie mogą zawierać tego samego słowa (np. „szafa” jest też w ćwiczeniu słów)
+      const d1 = pick(o1.words.filter(w => !c.words.includes(w)));
+      const d2 = pick(o2.words.filter(w => !c.words.includes(w) && w !== d1));
+      return { k: 'Leć przez', big: c.acc, answer, words: shuffle([answer, d1, d2]) };
+    }
+    if (kind === 'rhyme') {
+      const pair = shuffle(pick(RHYMES));
+      const end = pair[0].slice(-2);
+      const others = shuffle(RHYMES.flat().filter(w => !pair.includes(w) && w.slice(-2) !== end)).slice(0, 2);
+      return { k: 'Co rymuje się ze słowem:', big: pair[0], answer: pair[1], words: shuffle([pair[1], ...others]) };
+    }
+    const pair = shuffle(pick(OPPOSITES));
+    const others = shuffle(OPPOSITES.filter(p => !p.includes(pair[0])).flat()).slice(0, 2);
+    return { k: 'Leć przez przeciwieństwo słowa:', big: pair[0], answer: pair[1], words: shuffle([pair[1], ...others]) };
+  }
+  function makeTasks(level, n) {
+    const kinds = level === 1 ? ['exact', 'exact', 'cat', 'cat'] : ['exact', 'cat', 'rhyme', 'opp'];
+    const out = [];
+    let order = [];
+    while (out.length < n) {
+      if (!order.length) order = shuffle(kinds);
+      const t = makeTask(order.pop(), level);
+      if (out.some(o => o.big === t.big)) continue;
+      out.push(t);
+    }
+    return out;
+  }
+
+  // ---------- Gracze i sterowanie ----------
+  const COLORS = ['#ff8a3d', '#3cc3c3', '#f06bb3', '#9f86ff'];
+  const KEYSETS = [
+    { up: ['KeyW'], down: ['KeyS'], label: ['W', 'S'] },
+    { up: ['ArrowUp'], down: ['ArrowDown'], label: ['↑', '↓'] },
+    { up: ['KeyT'], down: ['KeyG'], label: ['T', 'G'] },
+    { up: ['KeyI'], down: ['KeyK'], label: ['I', 'K'] },
+  ];
+  const ARROW = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d < 0 ? 'M12 5l8 10H4z' : 'M12 19L4 9h16z'}" fill="currentColor"/></svg>`;
+  const STAR = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/></svg>';
+
+  const $ = id => document.getElementById(id);
+  const settings = { count: 2, level: 1, speed: 9, len: 8 };
+  const savedNames = ['', '', '', ''];
+
+  function renderNames() {
+    $('names').innerHTML = Array.from({ length: settings.count }, (_, i) => {
+      const ks = settings.count === 1 ? ['W', 'S'] : KEYSETS[i].label;
+      return `<label class="name-row"><span class="dot" style="background:${COLORS[i]}"></span>
+        <input id="name-${i}" maxlength="12" placeholder="Zawodnik ${i + 1}" autocomplete="off" value="${esc(savedNames[i])}">
+        <span class="keys" title="Klawisze: góra i dół"><kbd>${ks[0]}</kbd><kbd>${ks[1]}</kbd></span></label>`;
+    }).join('');
+  }
+  renderNames();
+  document.addEventListener('input', e => { const m = /^name-(\d)$/.exec(e.target.id || ''); if (m) savedNames[+m[1]] = e.target.value; });
+
+  // ---------- Dźwięki ----------
+  let actx = null, soundOn = true;
+  function tone(freqs, dur = 0.12, type = 'triangle', gap = 0.09) {
+    if (!soundOn || !actx) return;
+    try {
+      freqs.forEach((f, i) => {
+        const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * gap;
+        o.type = type; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + 0.02);
+      });
+    } catch (e) {}
+  }
+  const sfx = {
+    ok: () => tone([660, 880, 1175]),
+    bad: () => tone([300, 220], 0.18, 'sawtooth', 0.12),
+    beep: () => tone([520], 0.15),
+    go: () => tone([880], 0.3),
+    finish: () => tone([523, 659, 784, 1047], 0.2, 'triangle', 0.12),
+  };
+
+  // ---------- Rysowanie świata ----------
+  const hash = k => { const x = Math.sin(k * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const FONT = '"Andika","Verdana",sans-serif';
+  const skyCache = new Map();
+  function sky(ctx, W, H) {
+    const key = H;
+    if (!skyCache.has(key)) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#3a2466'); g.addColorStop(0.55, '#8a4a7e'); g.addColorStop(1, '#f39a5e');
+      skyCache.set(key, g);
+    }
+    ctx.fillStyle = skyCache.get(key); ctx.fillRect(0, 0, W, H);
+    // słońce
+    const sg = ctx.createRadialGradient(W * 0.78, H * 1.02, 0, W * 0.78, H * 1.02, H * 0.6);
+    sg.addColorStop(0, 'rgba(255,214,120,.95)'); sg.addColorStop(0.45, 'rgba(255,190,100,.5)'); sg.addColorStop(1, 'rgba(255,190,100,0)');
+    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+  }
+  function scenery(ctx, W, H, d) {
+    // chmury
+    ctx.fillStyle = 'rgba(255,240,250,.22)';
+    for (let k = Math.floor(d * 0.5 / 0.45) - 1, n = k + 5; k < n; k++) {
+      const x = (k * 0.45 - d * 0.5) * W, y = H * (0.12 + hash(k) * 0.45), r = H * (0.07 + hash(k + 9) * 0.05);
+      ctx.beginPath(); ctx.ellipse(x, y, r * 2.2, r, 0, 0, 7); ctx.ellipse(x + r * 1.2, y - r * 0.5, r * 1.3, r * 0.9, 0, 0, 7); ctx.fill();
+    }
+    // wieże zamku
+    ctx.fillStyle = 'rgba(40,22,62,.62)';
+    const step = 0.16;
+    for (let k = Math.floor(d * 0.3 / step) - 1, n = k + Math.ceil(1 / step) + 3; k < n; k++) {
+      const x = (k * step - d * 0.3) * W, w = W * (0.035 + hash(k) * 0.03), h = H * (0.12 + hash(k + 3) * 0.24);
+      ctx.fillRect(x, H - h, w, h);
+      const bw = w / 5;
+      for (let b = 0; b < 5; b += 2) ctx.fillRect(x + b * bw, H - h - bw, bw, bw);
+      if (hash(k + 7) > 0.55) { ctx.beginPath(); ctx.moveTo(x - 2, H - h); ctx.lineTo(x + w / 2, H - h - w * 1.3); ctx.lineTo(x + w + 2, H - h); ctx.fill(); }
+    }
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function hoop(ctx, cx, cy, sh, word, state) {
+    const fs = Math.max(15, Math.min(sh * 0.42, 30));
+    ctx.font = `700 ${fs}px ${FONT}`;
+    const w = ctx.measureText(word).width + fs * 1.3, h = sh * 0.78;
+    const fill = state === 'ok' ? '#d6f5e3' : state === 'bad' ? '#fde0df' : '#fffaf0';
+    const ring = state === 'ok' ? '#2fa866' : state === 'bad' ? '#e0524f' : state === 'show' ? '#2fa866' : '#f2b632';
+    ctx.save();
+    ctx.shadowColor = 'rgba(30,10,40,.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+    roundRect(ctx, cx - w / 2, cy - h / 2, w, h, h / 2); ctx.fillStyle = fill; ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = Math.max(3, sh * 0.07); ctx.strokeStyle = ring;
+    roundRect(ctx, cx - w / 2, cy - h / 2, w, h, h / 2); ctx.stroke();
+    ctx.fillStyle = '#24163a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(word, cx, cy + fs * 0.04);
+  }
+  function rider(ctx, x, y, sh, color, t, tilt) {
+    const s = sh / 95;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(s, s);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // szalik
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(-4, -24); ctx.quadraticCurveTo(-20, -24 + Math.sin(t * 9) * 4, -36, -20 + Math.sin(t * 9 + 1) * 6); ctx.stroke();
+    // kij miotły
+    ctx.strokeStyle = '#7a4a22'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(-50, 8); ctx.lineTo(44, 0); ctx.stroke();
+    // witki
+    ctx.fillStyle = '#e8b04a'; ctx.strokeStyle = '#7a4a22'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-48, 2); ctx.lineTo(-80, -8); ctx.lineTo(-86, 10); ctx.lineTo(-78, 24); ctx.lineTo(-48, 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // peleryna i ciało
+    ctx.fillStyle = color; ctx.strokeStyle = '#24163a'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(-20, 6); ctx.lineTo(12, 4); ctx.lineTo(2, -28); ctx.lineTo(-8, -28); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // głowa
+    ctx.fillStyle = '#f5cfae';
+    ctx.beginPath(); ctx.arc(-2, -36, 9, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#24163a'; ctx.beginPath(); ctx.arc(2, -37, 1.6, 0, 7); ctx.fill();
+    // kapelusz
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(-14, -41); ctx.lineTo(10, -42); ctx.lineTo(-10, -66); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(-10, -66, 3, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- Demo na ekranie startowym ----------
+  (function demo() {
+    const c = $('demo'), ctx = c.getContext('2d');
+    let d = 0, last = performance.now();
+    const words = ['kot', 'koc', 'kos'];
+    function frame(t) {
+      if (!$('setup').hidden) {
+        const dt = Math.min(0.05, (t - last) / 1000); d += dt * 0.08;
+        const W = c.width, H = c.height, sh = H / 3;
+        sky(ctx, W, H); scenery(ctx, W, H, d);
+        const gx = W * (1.1 - ((d * 2) % 1.2));
+        words.forEach((w, i) => hoop(ctx, gx, sh * (i + 0.5), sh, w, gx < W * 0.2 && i === 0 ? 'ok' : ''));
+        rider(ctx, W * 0.2, sh * 0.72 + Math.sin(t / 400) * 4, sh, COLORS[0], t / 1000, 0);
+        ctx.font = `700 22px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillStyle = 'rgba(36,22,58,.75)'; roundRect(ctx, 10, 10, ctx.measureText('Leć przez słowo: kot').width + 20, 34, 12); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.fillText('Leć przez słowo: kot', 20, 14);
+      }
+      last = t; requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+
+  // ---------- Wyścig ----------
+  const RIDER_X = 0.17;   // pozycja zawodnika na pasie (część szerokości)
+  const FIRST = 1.15, GAP = 1.0;  // odległości w szerokościach pasa
+  let race = null, rafId = 0, lastT = 0;
+
+  function gatePos(i) { return FIRST + i * GAP; }
+
+  function startRace() {
+    const n = settings.count;
+    const names = Array.from({ length: n }, (_, i) => (savedNames[i] || '').trim() || `Zawodnik ${i + 1}`);
+    const tasks = makeTasks(settings.level, settings.len);
+    race = {
+      tasks, time: 0, countdown: 3.6, paused: false, doneAt: null, finishPos: gatePos(tasks.length - 1) + 0.75,
+      v: (1 - RIDER_X) / settings.speed,
+      players: names.map((name, i) => ({
+        name, color: COLORS[i], keys: n === 1 ? { up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'] } : KEYSETS[i],
+        d: 0, slot: 1, y: 0.5, next: 0, stars: 0, results: [], orders: tasks.map(() => shuffle([0, 1, 2])),
+        boostUntil: -1, slowUntil: -1, flash: null, finishTime: null, place: null, parts: [], floats: [], panelKey: '',
+      })),
+    };
+    buildLanes();
+    $('setup').hidden = true; $('race').hidden = false; closeModal();
+    window.scrollTo({ top: 0 });
+    cancelAnimationFrame(rafId); lastT = performance.now(); rafId = requestAnimationFrame(loop);
+  }
+
+  function buildLanes() {
+    const lanes = $('lanes');
+    lanes.style.setProperty('--n', race.players.length);
+    lanes.querySelectorAll('.lane').forEach(l => l.remove());
+    race.players.forEach((p, i) => {
+      const el = document.createElement('div');
+      el.className = 'lane'; el.style.setProperty('--pc', p.color);
+      const lab = settings.count === 1 ? ['W / ↑', 'S / ↓'] : KEYSETS[i].label;
+      el.innerHTML = `<div class="lp">
+          <div class="lp-name"><span class="dot" style="background:${p.color};width:22px;height:22px;border-width:2px;box-shadow:none"></span><span class="n">${esc(p.name)}</span><span class="stars">${STAR}<b>0</b></span></div>
+          <div class="task"><span class="k"></span><span class="w"></span></div>
+          <div class="ctrls"><button type="button" data-p="${i}" data-dir="-1" aria-label="W górę">${ARROW(-1)}<span>${lab[0]}</span></button><button type="button" data-p="${i}" data-dir="1" aria-label="W dół">${ARROW(1)}<span>${lab[1]}</span></button></div>
+        </div><canvas class="sky" data-p="${i}"></canvas>`;
+      lanes.appendChild(el);
+      p.el = el; p.canvas = el.querySelector('canvas'); p.ctx = p.canvas.getContext('2d');
+      p.taskEl = el.querySelector('.task'); p.kEl = el.querySelector('.task .k'); p.wEl = el.querySelector('.task .w'); p.starEl = el.querySelector('.stars b');
+      p.cw = 0; p.ch = 0;
+    });
+    // mini mapa
+    $('map').innerHTML = `<div class="track"></div>${race.tasks.map((_, i) => `<span class="tick" style="left:calc(${(gatePos(i) / race.finishPos * 100).toFixed(2)}% - ${(gatePos(i) / race.finishPos * 22).toFixed(1)}px)"></span>`).join('')}<span class="flag"></span>
+      ${race.players.map((p, i) => `<span class="who" id="who-${i}" style="background:${p.color}"></span>`).join('')}`;
+  }
+
+  function move(i, dir) {
+    if (!race || race.paused) return;
+    const p = race.players[i];
+    if (!p || p.finishTime != null) return;
+    p.slot = Math.max(0, Math.min(2, p.slot + dir));
+  }
+  function setSlot(i, slot) {
+    if (!race || race.paused) return;
+    const p = race.players[i];
+    if (!p || p.finishTime != null) return;
+    p.slot = Math.max(0, Math.min(2, slot));
+  }
+
+  function resolve(p, gi) {
+    const t = race.tasks[gi];
+    const word = t.words[p.orders[gi][p.slot]];
+    const ok = word === t.answer;
+    p.results[gi] = { slot: p.slot, ok };
+    const H = p.ch, W = p.cw;
+    if (ok) {
+      p.stars++; p.boostUntil = race.time + 1.4; p.flash = { kind: 'good', k: 'Brawo!', w: `${t.answer} +1`, until: race.time + 1.1 };
+      p.floats.push({ x: W * RIDER_X, y: p.y * H - 20, text: '+1', life: 1 });
+      sfx.ok();
+    } else {
+      p.slowUntil = race.time + 1.0; p.flash = { kind: 'bad', k: 'Dobre słowo to:', w: t.answer, until: race.time + 1.6 };
+      for (let k = 0; k < 10; k++) p.parts.push({ x: W * RIDER_X, y: p.y * H, vx: (Math.random() - 0.7) * 120, vy: (Math.random() - 0.5) * 80, life: 0.7, c: 'rgba(230,220,240,' });
+      sfx.bad();
+    }
+  }
+
+  function update(dt) {
+    if (race.countdown > -0.7) {
+      const before = Math.ceil(race.countdown);
+      race.countdown -= dt;
+      const after = Math.ceil(race.countdown);
+      if (after !== before) showCount(after);
+      if (race.countdown <= -0.7) showCount(-1);
+      if (race.countdown > 0) return;
+    }
+    race.time += dt;
+    let allDone = true;
+    for (const p of race.players) {
+      const m = p.finishTime != null ? 0.35 : p.boostUntil > race.time ? 1.7 : p.slowUntil > race.time ? 0.55 : 1;
+      p.d += race.v * m * dt;
+      while (p.next < race.tasks.length && gatePos(p.next) <= p.d) { resolve(p, p.next); p.next++; }
+      if (p.finishTime == null && p.d >= race.finishPos) {
+        p.finishTime = race.time;
+        p.place = race.players.filter(o => o.finishTime != null).length;
+        p.flash = null; sfx.finish();
+      }
+      if (p.finishTime == null) allDone = false;
+      p.y += ((p.slot + 0.5) / 3 - p.y) * Math.min(1, dt * 12);
+      if (p.boostUntil > race.time && p.cw) {
+        p.parts.push({ x: p.cw * RIDER_X - p.ch / 3 * 1.2, y: p.y * p.ch + (Math.random() - 0.5) * 10, vx: -80 - Math.random() * 80, vy: (Math.random() - 0.5) * 40, life: 0.6, c: 'rgba(255,214,102,' });
+      }
+      for (const q of p.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= dt; }
+      p.parts = p.parts.filter(q => q.life > 0);
+      for (const f of p.floats) { f.y -= 40 * dt; f.life -= dt; }
+      p.floats = p.floats.filter(f => f.life > 0);
+    }
+    if (allDone && race.doneAt == null) race.doneAt = race.time;
+    if (race.doneAt != null && race.time - race.doneAt > 1.4) { showResults(); return false; }
+  }
+
+  function drawLane(p, now) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cw = p.canvas.clientWidth, ch = p.canvas.clientHeight;
+    if (cw !== p.cw || ch !== p.ch) {
+      p.cw = cw; p.ch = ch; p.canvas.width = Math.round(cw * dpr); p.canvas.height = Math.round(ch * dpr);
+    }
+    const ctx = p.ctx, W = cw, H = ch, sh = H / 3;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sky(ctx, W, H); scenery(ctx, W, H, p.d);
+    // linie torów
+    ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 1; ctx.setLineDash([6, 10]);
+    for (let s = 1; s < 3; s++) { ctx.beginPath(); ctx.moveTo(0, sh * s); ctx.lineTo(W, sh * s); ctx.stroke(); }
+    ctx.setLineDash([]);
+    // meta
+    const fx = W * RIDER_X + (race.finishPos - p.d) * W;
+    if (fx < W + 40 && fx > -40) {
+      const sq = Math.max(8, H / 12);
+      for (let r = 0; r * sq < H; r++) for (let c = 0; c < 2; c++) {
+        ctx.fillStyle = (r + c) % 2 ? '#24163a' : '#ffffff'; ctx.fillRect(fx + c * sq - sq, r * sq, sq, sq);
+      }
+    }
+    // obręcze
+    race.tasks.forEach((t, gi) => {
+      const gx = W * RIDER_X + (gatePos(gi) - p.d) * W;
+      if (gx < -260 || gx > W + 260) return;
+      const res = p.results[gi];
+      for (let s = 0; s < 3; s++) {
+        const word = t.words[p.orders[gi][s]];
+        let st = '';
+        if (res) st = s === res.slot ? (res.ok ? 'ok' : 'bad') : (word === t.answer ? 'show' : '');
+        hoop(ctx, gx, sh * (s + 0.5), sh, word, st);
+      }
+    });
+    // iskry
+    for (const q of p.parts) { ctx.fillStyle = q.c + Math.max(0, q.life).toFixed(2) + ')'; ctx.beginPath(); ctx.arc(q.x, q.y, 3 + (1 - q.life) * 4, 0, 7); ctx.fill(); }
+    // zawodnik
+    const bob = Math.sin(now / 260 + p.color.length) * 3;
+    const tilt = Math.max(-0.35, Math.min(0.35, ((p.slot + 0.5) / 3 - p.y) * 2.2));
+    rider(ctx, W * RIDER_X, p.y * H + sh * 0.22 + bob, sh, p.color, now / 1000, tilt);
+    for (const f of p.floats) {
+      ctx.font = `700 ${Math.max(18, sh * 0.45)}px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = `rgba(255,209,102,${f.life})`;
+      ctx.fillText(f.text, f.x + 30, f.y);
+    }
+    if (p.finishTime != null) {
+      ctx.fillStyle = 'rgba(30,20,48,.55)'; ctx.fillRect(0, 0, W, H);
+      ctx.font = `400 ${Math.min(H * 0.32, 56)}px "Lilita One","Trebuchet MS",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffd166'; ctx.fillText(`Meta! ${p.place}. miejsce`, W / 2, H / 2);
+    }
+    if (race.paused) { ctx.fillStyle = 'rgba(30,20,48,.4)'; ctx.fillRect(0, 0, W, H); }
+  }
+
+  function updatePanel(p) {
+    let kind = '', k, w;
+    if (p.finishTime != null) { kind = 'good'; k = `Meta! ${p.place}. miejsce`; w = `${p.stars} z ${race.tasks.length}`; }
+    else if (p.flash && p.flash.until > race.time) { kind = p.flash.kind; k = p.flash.k; w = p.flash.w; }
+    else { const t = race.tasks[Math.min(p.next, race.tasks.length - 1)]; k = t.k; w = t.big; }
+    const key = kind + k + w + p.stars;
+    if (key === p.panelKey) return;
+    p.panelKey = key;
+    p.taskEl.className = 'task' + (kind ? ' ' + kind : '');
+    p.kEl.textContent = k; p.wEl.textContent = w; p.starEl.textContent = p.stars;
+  }
+
+  function loop(t) {
+    if (!race) return;
+    const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
+    if (!race.paused) { if (update(dt) === false) return; }
+    race.players.forEach((p, i) => {
+      drawLane(p, t); updatePanel(p);
+      const pct = Math.min(1, p.d / race.finishPos);
+      const who = $('who-' + i); if (who) who.style.left = `calc(${(pct * 100).toFixed(2)}% - ${(pct * 22).toFixed(1)}px + 11px)`;
+    });
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function showCount(n) {
+    const el = $('count');
+    if (n > 0) { el.hidden = false; el.innerHTML = `<span>${n}</span>`; sfx.beep(); }
+    else if (n === 0) { el.hidden = false; el.innerHTML = '<span>Start!</span>'; sfx.go(); }
+    else el.hidden = true;
+  }
+
+  // ---------- Okna ----------
+  function openModal(html) { $('modal').innerHTML = html; $('overlay').hidden = false; }
+  function closeModal() { $('overlay').hidden = true; $('modal').innerHTML = ''; }
+
+  function setPaused(on) {
+    if (!race || race.doneAt != null) return;
+    race.paused = on;
+    $('pause-btn').textContent = on ? 'Graj dalej' : 'Pauza';
+    if (on) openModal(`<h2>Pauza</h2><p>Złapcie oddech. Miotły czekają w powietrzu.</p>
+      <div class="row"><button type="button" class="soft" data-act="quit">Zakończ wyścig</button><button type="button" class="big" data-act="resume">Graj dalej</button></div>`);
+    else closeModal();
+  }
+
+  function showResults() {
+    const ps = race.players.slice().sort((a, b) => a.place - b.place);
+    const best = Math.max(...ps.map(p => p.stars));
+    const readers = ps.filter(p => p.stars === best);
+    const solo = ps.length === 1;
+    const cup = `<svg class="cup" viewBox="0 0 64 64" aria-hidden="true"><path d="M18 8h28v14a14 14 0 0 1-28 0Z" fill="#ffd166" stroke="#b0582c" stroke-width="3"/><path d="M18 12H9v4a9 9 0 0 0 10 9M46 12h9v4a9 9 0 0 1-10 9" fill="none" stroke="#b0582c" stroke-width="3"/><path d="M28 36h8v10h-8z" fill="#ffd166" stroke="#b0582c" stroke-width="3"/><rect x="18" y="46" width="28" height="9" rx="3" fill="#b0582c"/></svg>`;
+    const missed = race.tasks.map((t, i) => ({ t, i })).filter(({ i }) => race.players.some(p => p.results[i] && !p.results[i].ok));
+    openModal(`
+      <div class="row" style="justify-content:flex-start;gap:16px">${cup}<h2>${solo ? 'Trening ukończony!' : `Puchar dla: ${esc(ps[0].name)}!`}</h2></div>
+      <ol class="podium">${ps.map(p => `<li class="${p.place === 1 && !solo ? 'first' : ''}"><span class="place">${p.place}.</span><span class="dot" style="background:${p.color};width:26px;height:26px;border-width:2px;box-shadow:none"></span>
+        <span class="nm">${esc(p.name)}</span><span class="t">${p.finishTime.toFixed(1).replace('.', ',')} s</span><span class="s">${STAR}${p.stars}/${race.tasks.length}</span></li>`).join('')}</ol>
+      ${best > 0 ? `<div class="reader">${STAR}<span>${solo ? `Przeczytane dobrze: ${best} z ${race.tasks.length}.` : `Najlepszy czytelnik: <b>${readers.map(p => esc(p.name)).join(', ')}</b> (${best} z ${race.tasks.length})`}</span></div>` : ''}
+      ${missed.length ? `<div><p style="font-size:16px;color:var(--ink-soft);margin-bottom:4px">Słowa do powtórki:</p><div class="review">${missed.map(({ t }) => `<span>${esc(t.k)} <b>${esc(t.big)}</b> → <b>${esc(t.answer)}</b></span>`).join('')}</div></div>` : ''}
+      <div class="row"><button type="button" class="soft" data-act="setup">Zmień ustawienia</button><button type="button" class="big" data-act="again">Jeszcze raz!</button></div>`);
+  }
+
+  function toSetup() {
+    cancelAnimationFrame(rafId); race = null; closeModal();
+    $('race').hidden = true; $('setup').hidden = false; $('count').hidden = true;
+    $('pause-btn').textContent = 'Pauza';
+    renderNames();
+  }
+
+  // ---------- Zdarzenia ----------
+  const segs = { count: 'count-seg', level: 'level-seg', speed: 'speed-seg', len: 'len-seg' };
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const d = b.dataset;
+    for (const key of Object.keys(segs)) if (d[key] != null) {
+      settings[key] = +d[key];
+      document.querySelectorAll(`#${segs[key]} button`).forEach(x => x.setAttribute('aria-pressed', x === b));
+      if (key === 'count') renderNames();
+      return;
+    }
+    if (b.id === 'start-btn') {
+      try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume && actx.resume(); } catch (err) { actx = null; }
+      startRace(); return;
+    }
+    if (b.id === 'pause-btn') { setPaused(!race.paused); return; }
+    if (b.id === 'sound-btn') { soundOn = !soundOn; b.textContent = soundOn ? 'Dźwięk: tak' : 'Dźwięk: nie'; b.setAttribute('aria-pressed', soundOn); return; }
+    if (d.act === 'resume') setPaused(false);
+    else if (d.act === 'quit' || d.act === 'setup') toSetup();
+    else if (d.act === 'again') startRace();
+  });
+  // Przyciski góra/dół reagują od razu po dotknięciu (bez czekania na „click”).
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.ctrls button');
+    if (b) { e.preventDefault(); move(+b.dataset.p, +b.dataset.dir); return; }
+    const c = e.target.closest('canvas.sky');
+    if (c) { const r = c.getBoundingClientRect(); setSlot(+c.dataset.p, Math.floor((e.clientY - r.top) / r.height * 3)); }
+  });
+  document.addEventListener('keydown', e => {
+    if (!race || $('race').hidden) return;
+    if (e.code === 'Escape' || e.code === 'KeyP') { setPaused(!race.paused); e.preventDefault(); return; }
+    if (e.target && e.target.tagName === 'INPUT') return;
+    race.players.forEach((p, i) => {
+      if (p.keys.up.includes(e.code)) { move(i, -1); e.preventDefault(); }
+      else if (p.keys.down.includes(e.code)) { move(i, 1); e.preventDefault(); }
+    });
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && race && !race.paused && race.doneAt == null) setPaused(true); });
+
+  // Poczekaj na czcionkę, żeby słowa w obręczach od razu były wyraźne.
+  try { document.fonts && document.fonts.load(`700 24px Andika`); } catch (e) {}
+})();
+</script>
