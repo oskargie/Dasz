@@ -1,0 +1,740 @@
+<title>Detektyw Smoczek</title>
+<meta name="description" content="Gra detektywistyczna dla 2-4 graczy z klas 1-2: czytaj wskazówki świadków i znajdź złodzieja złotego jaja.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Grandstander:wght@600;800&display=swap">
+<style>
+/* Układ: zamek nocą — mapa komnat po lewej, zeszyt detektywa w kratkę po prawej, świadkowie mówią w dymkach. Jeden, nocny wygląd (celowo bez trybu jasnego). */
+:root{
+  --night:#171c38; --stone:#262d55; --stone-2:#323a6b; --line:#4a5390;
+  --paper:#f5f8fd; --grid:#d3e0f2; --margin:#e88c8c; --ink:#1d2246; --ink-soft:#565d8c;
+  --ember:#ff7a33; --gold:#ffc93c; --ok:#24965a; --bad:#cf3f3f;
+  --moon:#eef0ff; --moon-soft:#aab2de;
+  --f-display:"Grandstander","Comic Sans MS","Trebuchet MS",system-ui,sans-serif;
+  --f-read:"Andika","Verdana","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{
+  margin:0; background:var(--night); color:var(--moon);
+  font-family:var(--f-read); font-size:18px; line-height:1.5;
+  background-image:
+    radial-gradient(circle at 88% -6%, rgba(255,201,60,.22), transparent 34%),
+    radial-gradient(1.5px 1.5px at 12% 18%, rgba(238,240,255,.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 34% 8%, rgba(238,240,255,.5), transparent 60%),
+    radial-gradient(1.5px 1.5px at 62% 14%, rgba(238,240,255,.6), transparent 60%),
+    radial-gradient(1.5px 1.5px at 76% 30%, rgba(238,240,255,.4), transparent 60%);
+  background-attachment:fixed;
+}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.app{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 40px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+.eyebrow{font-family:var(--f-display);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:13px;color:var(--gold)}
+
+/* ---------- Ekran startowy ---------- */
+.setup{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:start}
+.hero h1{font-size:clamp(44px,7vw,82px);font-weight:800;color:var(--gold);letter-spacing:-.01em;
+  text-shadow:0 4px 0 #b4561f, 0 10px 30px rgba(255,122,51,.35)}
+.hero .sub{font-family:var(--f-display);font-size:clamp(20px,2.6vw,26px);color:var(--moon);margin:8px 0 18px}
+.story{background:var(--stone);border:2px solid var(--line);border-radius:22px;padding:20px 22px;font-size:21px;line-height:1.6;max-width:62ch}
+.story p{margin:0 0 10px}.story p:last-child{margin:0}
+.steps{display:grid;gap:10px;margin:20px 0 0;padding:0;list-style:none;counter-reset:s}
+.steps li{display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start;color:var(--moon-soft)}
+.steps li::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:36px;height:36px;border-radius:50%;
+  background:var(--stone-2);color:var(--gold);font-family:var(--f-display);font-weight:800}
+.panel{background:var(--paper);color:var(--ink);border-radius:22px;padding:22px;display:grid;gap:18px;
+  box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.panel h2{font-size:22px}
+.seg{display:flex;flex-wrap:wrap;gap:10px}
+.seg button{flex:1 1 0;min-width:0;padding:12px 10px;border-radius:14px;border:3px solid var(--grid);background:#fff;color:var(--ink);font-family:var(--f-display);font-weight:800;font-size:22px}
+.seg button small{display:block;font-family:var(--f-read);font-weight:400;font-size:14px;color:var(--ink-soft)}
+.seg button[aria-pressed="true"]{border-color:var(--ember);background:#fff2e9}
+.names{display:grid;gap:10px}
+.name-row{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center}
+.name-row input{width:100%;padding:10px 12px;border-radius:12px;border:2px solid var(--grid);background:#fff;color:var(--ink);font-size:20px}
+.dot{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--ink)}
+.big{border:0;border-radius:18px;padding:16px 22px;background:var(--ember);color:#fff;font-family:var(--f-display);font-weight:800;font-size:24px;
+  box-shadow:0 5px 0 #b4561f;transition:transform .1s}
+.big:hover{transform:translateY(-2px)}
+.big:active{transform:translateY(3px);box-shadow:0 2px 0 #b4561f}
+.ghost{border:2px solid var(--line);background:transparent;color:var(--moon);border-radius:14px;padding:10px 16px;font-family:var(--f-display);font-weight:600}
+
+/* ---------- Gra ---------- */
+.topbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-bottom:18px}
+.topbar h1{font-size:28px;color:var(--gold)}
+.turn{display:flex;align-items:center;gap:10px;background:var(--stone);border:2px solid var(--line);border-radius:999px;padding:6px 16px 6px 8px;font-size:18px}
+.turn b{font-family:var(--f-display);font-size:20px}
+.players{display:flex;flex-wrap:wrap;gap:8px}
+.pchip{display:flex;align-items:center;gap:6px;padding:4px 12px 4px 4px;border-radius:999px;background:var(--stone);border:2px solid transparent;font-size:16px}
+.pchip.now{border-color:var(--gold)}
+.pchip .dot{width:24px;height:24px;border-width:2px;box-shadow:none}
+.stars{display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums;color:var(--gold);font-weight:700}
+.chances{display:flex;align-items:center;gap:6px;color:var(--moon-soft);font-size:15px}
+.egg{width:20px;height:26px}
+.board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;align-items:start}
+.sec-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.sec-title h2{font-size:26px}
+.sec-title span{color:var(--moon-soft);font-size:15px}
+.rooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.room{position:relative;display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:center;text-align:left;
+  padding:14px;border-radius:20px;background:var(--stone);border:2px solid var(--line);color:var(--moon);transition:transform .15s,border-color .15s}
+.room:hover:not(:disabled){transform:translateY(-3px);border-color:var(--ember)}
+.room .ico{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--stone-2);color:var(--ember)}
+.room .ico svg{width:36px;height:36px}
+.room .rname{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1}
+.room .rwho{font-size:15px;color:var(--moon-soft)}
+.room:disabled{cursor:default;opacity:.62}
+.room:disabled .ico{color:var(--ok);background:rgba(36,150,90,.15)}
+.stamp{display:inline-block;margin-top:4px;font-family:var(--f-display);font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+  color:#7fe0a8;border:2px solid #7fe0a8;border-radius:8px;padding:1px 6px;transform:rotate(-3deg)}
+.hint-box{margin-top:16px;padding:14px 16px;border-radius:16px;border:2px dashed var(--line);color:var(--moon-soft);font-size:17px}
+.hint-box b{color:var(--gold)}
+
+.notebook{position:relative;color:var(--ink);background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px;border-radius:8px 22px 22px 8px;padding:18px 18px 22px 52px;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.notebook::before{content:"";position:absolute;top:0;bottom:0;left:38px;width:2px;background:var(--margin)}
+.notebook h2{font-size:26px;color:var(--ink)}
+.notebook h3{font-size:19px;margin:18px 0 8px}
+.notebook .tip{font-size:15px;color:var(--ink-soft);margin:2px 0 12px}
+.suspects{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.sus{position:relative;display:grid;gap:4px;justify-items:center;padding:8px 6px 10px;border-radius:16px;border:2px solid var(--grid);background:#fff;color:var(--ink);transition:transform .15s}
+.sus:hover{transform:translateY(-2px)}
+.sus svg{width:100%;max-width:110px;height:auto}
+.sus .sname{font-weight:700;font-size:15px;line-height:1.2;text-align:center}
+.sus.out svg{opacity:.35;filter:grayscale(.8)}
+.sus.out .sname{text-decoration:line-through;color:var(--ink-soft)}
+.sus.out::after{content:"";position:absolute;inset:14px 18px 34px;
+  background:linear-gradient(45deg,transparent 46%,var(--bad) 46% 54%,transparent 54%),linear-gradient(-45deg,transparent 46%,var(--bad) 46% 54%,transparent 54%)}
+.clues{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.clues li{font-size:18px;line-height:1.45}
+.clues li b{font-family:var(--f-display);font-weight:600;color:var(--ink-soft);font-size:15px;margin-right:4px}
+.clues .empty{color:var(--ink-soft);font-style:italic}
+.accuse{margin-top:18px;width:100%}
+.accuse.pulse{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 5px 0 #b4561f,0 0 0 10px rgba(255,122,51,.25)}}
+
+/* ---------- Okno świadka ---------- */
+.overlay{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:16px;background:rgba(9,11,28,.76)}
+.modal{width:100%;max-width:700px;max-height:calc(100% - 8px);overflow:auto;background:var(--paper);color:var(--ink);border-radius:26px;padding:22px;
+  display:grid;gap:16px;box-shadow:0 30px 60px rgba(0,0,0,.5);animation:pop .22s ease-out}
+@keyframes pop{from{transform:scale(.94);opacity:.4}}
+.mhead{display:flex;align-items:center;gap:14px}
+.mhead .ico{width:58px;height:58px;flex:none;border-radius:18px;display:grid;place-items:center;background:var(--night);color:var(--ember)}
+.mhead .ico svg{width:38px;height:38px}
+.mhead h2{font-size:26px}
+.mhead p{margin:0;color:var(--ink-soft);font-size:16px}
+.reader{display:inline-flex;align-items:center;gap:8px;align-self:start;justify-self:start;padding:6px 14px 6px 6px;border-radius:999px;background:#fff;border:2px solid var(--grid);font-size:17px}
+.reader .dot{width:26px;height:26px;border-width:2px;box-shadow:none}
+.bubble{position:relative;background:#fff;border:3px solid var(--ink);border-radius:22px;padding:18px 22px;
+  font-size:clamp(24px,3.6vw,32px);line-height:1.5;letter-spacing:.01em;word-spacing:.08em}
+.bubble.small{font-size:clamp(20px,2.8vw,24px)}
+.bubble::before{content:"";position:absolute;top:-14px;left:34px;width:22px;height:22px;background:#fff;border-left:3px solid var(--ink);border-top:3px solid var(--ink);transform:rotate(45deg)}
+.q{font-family:var(--f-display);font-weight:800;font-size:clamp(22px,3vw,28px)}
+.opts{display:grid;gap:10px}
+.opt{text-align:left;padding:14px 18px;border-radius:16px;border:3px solid var(--grid);background:#fff;color:var(--ink);font-size:clamp(21px,3vw,26px);font-weight:700}
+.opt:hover{border-color:var(--ember)}
+.opt.wrong{border-color:var(--bad);background:#fdeaea;animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.soft{border:2px solid var(--grid);background:#fff;color:var(--ink);border-radius:14px;padding:10px 16px;font-weight:700;font-size:17px}
+.soft:hover{border-color:var(--ink-soft)}
+.msg{border-radius:16px;padding:12px 16px;font-size:20px;font-weight:700}
+.msg.bad{background:#fdeaea;color:#9b2525}
+.msg.good{background:#e3f6eb;color:#17643b;display:flex;align-items:center;gap:12px}
+.msg .note{font-weight:400;font-size:16px}
+.pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pick .sus[aria-pressed="true"]{border-color:var(--ember);box-shadow:0 0 0 3px rgba(255,122,51,.35)}
+.confirm{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:center}
+.confirm svg{width:120px;height:auto}
+
+/* ---------- Koniec ---------- */
+.end{display:grid;justify-items:center;text-align:center;gap:18px;max-width:760px;margin:20px auto 0}
+.end h1{font-size:clamp(40px,6vw,64px);color:var(--gold)}
+.end .lead{font-size:22px;max-width:46ch;margin:0}
+.reveal{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;align-items:center;text-align:left;background:var(--paper);color:var(--ink);border-radius:24px;padding:18px 22px;width:100%}
+.reveal svg{width:150px;height:auto}
+.reveal h2{font-size:26px;margin-bottom:6px}
+.reveal p{margin:0;font-size:21px;line-height:1.5}
+.scores{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.scores .pchip{font-size:19px;padding:6px 16px 6px 6px}
+.bigegg{width:110px;height:140px;animation:wobble 2.4s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes wobble{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+
+@media (max-width:860px){
+  .setup,.board{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:520px){
+  body{font-size:17px}
+  .rooms{grid-template-columns:minmax(0,1fr)}
+  .notebook{padding-left:36px}
+  .notebook::before{left:24px}
+  .suspects,.pick{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .reveal,.confirm{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="app">
+
+  <!-- EKRAN STARTOWY -->
+  <section id="setup" class="setup">
+    <div class="hero">
+      <div class="eyebrow">Gra detektywistyczna · klasy 1-2 · 2-4 graczy</div>
+      <h1>Detektyw Smoczek</h1>
+      <p class="sub">Zagadka zaginionego złotego jaja</p>
+      <div class="story">
+        <p>Smoczyca Iskra płacze. Ze skarbca zniknęło jej złote jajo!</p>
+        <p>W zamku mieszka sześć osób. Jedna z nich zabrała jajo.</p>
+        <p>Odwiedzajcie komnaty, czytajcie, co mówią świadkowie, i znajdźcie złodzieja.</p>
+      </div>
+      <ol class="steps">
+        <li>Gracze po kolei wybierają komnatę i czytają na głos słowa świadka.</li>
+        <li>Odpowiadacie na pytanie. Dobra odpowiedź za pierwszym razem daje gwiazdkę.</li>
+        <li>W zeszycie skreślacie osoby, które nie pasują do wskazówek.</li>
+        <li>Gdy już wiecie, kto to zrobił, wskażcie złodzieja. Macie 3 szanse.</li>
+      </ol>
+    </div>
+
+    <div class="panel">
+      <div>
+        <h2>Ilu detektywów gra?</h2>
+      </div>
+      <div class="seg" id="count-seg">
+        <button type="button" data-count="2" aria-pressed="true">2</button>
+        <button type="button" data-count="3" aria-pressed="false">3</button>
+        <button type="button" data-count="4" aria-pressed="false">4</button>
+      </div>
+      <div class="names" id="names">
+        <label class="name-row" data-row="0"><span class="dot" style="background:#ff7a33"></span><input id="name-0" maxlength="14" placeholder="Detektyw 1" autocomplete="off"></label>
+        <label class="name-row" data-row="1"><span class="dot" style="background:#35c3c3"></span><input id="name-1" maxlength="14" placeholder="Detektyw 2" autocomplete="off"></label>
+        <label class="name-row" data-row="2" hidden><span class="dot" style="background:#f06bb3"></span><input id="name-2" maxlength="14" placeholder="Detektyw 3" autocomplete="off"></label>
+        <label class="name-row" data-row="3" hidden><span class="dot" style="background:#a98bff"></span><input id="name-3" maxlength="14" placeholder="Detektyw 4" autocomplete="off"></label>
+      </div>
+      <div>
+        <h2>Poziom czytania</h2>
+      </div>
+      <div class="seg" id="level-seg">
+        <button type="button" data-level="1" aria-pressed="true">Klasa 1<small>krótkie zdania</small></button>
+        <button type="button" data-level="2" aria-pressed="false">Klasa 2<small>dłuższe zdania</small></button>
+      </div>
+      <button type="button" class="big" id="start-btn">Zaczynamy śledztwo!</button>
+    </div>
+  </section>
+
+  <!-- GRA -->
+  <section id="game" hidden>
+    <div class="topbar">
+      <h1>Detektyw Smoczek</h1>
+      <div id="turn" class="turn"></div>
+      <div id="players" class="players"></div>
+      <div id="chances" class="chances"></div>
+    </div>
+    <div class="board">
+      <div>
+        <div class="sec-title"><h2>Komnaty zamku</h2><span id="rooms-left"></span></div>
+        <div id="rooms" class="rooms"></div>
+        <div id="hint" class="hint-box"></div>
+      </div>
+      <div class="notebook">
+        <h2>Zeszyt detektywa</h2>
+        <p class="tip">Dotknij osoby, żeby ją skreślić. Dotknij jeszcze raz, żeby przywrócić.</p>
+        <div id="suspects" class="suspects"></div>
+        <h3>Wskazówki</h3>
+        <ul id="clues" class="clues"></ul>
+        <button type="button" class="big accuse" id="accuse-btn">Wskaż złodzieja!</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- KONIEC -->
+  <section id="end" class="end" hidden></section>
+</div>
+
+<div id="overlay" class="overlay" hidden>
+  <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+</div>
+
+<script>
+(() => {
+  // ---------- Dane ----------
+  const PLAYER_COLORS = ['#ff7a33', '#35c3c3', '#f06bb3', '#a98bff'];
+
+  const HATS = [
+    { id: 'red',    nom: 'czerwona',  acc: 'czerwoną',  gen: 'czerwonej',  color: '#d9443a' },
+    { id: 'blue',   nom: 'niebieska', acc: 'niebieską', gen: 'niebieskiej', color: '#3b74e0' },
+    { id: 'green',  nom: 'zielona',   acc: 'zieloną',   gen: 'zielonej',   color: '#34a058' },
+    { id: 'yellow', nom: 'żółta',     acc: 'żółtą',     gen: 'żółtej',     color: '#f4c430' },
+  ];
+  const ITEMS = [
+    { id: 'broom',   nom: 'miotła',   acc: 'miotłę',   gen: 'miotły',  fem: true },
+    { id: 'key',     nom: 'klucz',    acc: 'klucz',    gen: 'klucza',  fem: false },
+    { id: 'lantern', nom: 'latarnia', acc: 'latarnię', gen: 'latarni', fem: true },
+    { id: 'book',    nom: 'księga',   acc: 'księgę',   gen: 'księgi',  fem: true },
+  ];
+
+  const PEOPLE = [
+    { name: 'Rycerz Bolek',     fem: false, skin: '#f2c9a5', hair: '#6b4423', shirt: '#9aa3b5', bg: '#c9d3ea',
+      motive: 'Chciałem ogrzać jajo w mojej zbroi. Tam jest bardzo ciepło! Już oddaję.' },
+    { name: 'Kucharka Hela',    fem: true,  skin: '#e2a982', hair: '#3b2a20', shirt: '#f7f3ea', bg: '#f3d2c4', longHair: true,
+      motive: 'Chciałam zrobić największy omlet na świecie! Przepraszam, już oddaję.' },
+    { name: 'Czarodziej Zenek', fem: false, skin: '#f5d3b8', hair: '#dddddd', shirt: '#6a4fc4', bg: '#d6cdf2', beard: true,
+      motive: 'Chciałem zamienić jajo w złotą rybkę. Już nie będę czarować!' },
+    { name: 'Ogrodniczka Ola',  fem: true,  skin: '#c98e66', hair: '#b5562a', shirt: '#5c8a3a', bg: '#cfe6c2', longHair: true,
+      motive: 'Chciałam posadzić jajo w ogródku. Myślałam, że wyrośnie złote drzewo!' },
+    { name: 'Błazen Fiki',      fem: false, skin: '#f0c4a0', hair: '#2a2a2a', shirt: '#d14a8b', bg: '#f2c9de',
+      motive: 'To był tylko żart! Chciałem, żeby wszyscy szukali. Już oddaję.' },
+    { name: 'Księżniczka Lena', fem: true,  skin: '#f7d7bf', hair: '#e2b13c', shirt: '#e889b5', bg: '#f6d6e6', longHair: true,
+      motive: 'Jajo było takie piękne! Chciałam je tylko przytulić. Przepraszam.' },
+  ];
+
+  const ROOMS = [
+    { id: 'kuchnia',    name: 'Kuchnia',    who: 'Kot Mruczek',      fem: false, greet: 'Miau!' },
+    { id: 'biblioteka', name: 'Biblioteka', who: 'Sowa Hania',       fem: true,  greet: 'Hu-hu!' },
+    { id: 'stajnia',    name: 'Stajnia',    who: 'Kucyk Puszek',     fem: false, greet: 'Iha-ha!' },
+    { id: 'ogrod',      name: 'Ogród',      who: 'Żaba Kumka',       fem: true,  greet: 'Kum-kum!' },
+    { id: 'wieza',      name: 'Wieża',      who: 'Nietoperz Gacek',  fem: false, greet: 'Pi-pi!' },
+    { id: 'lochy',      name: 'Lochy',      who: 'Pająk Feliks',     fem: false, greet: 'Cześć!' },
+  ];
+
+  const ICONS = {
+    kuchnia: '<path d="M8 22h32v9a9 9 0 0 1-9 9H17a9 9 0 0 1-9-9Z"/><path d="M4 22h40M19 15c0-3 3-3 3-7M27 15c0-3 3-3 3-7"/>',
+    biblioteka: '<rect x="7" y="10" width="8" height="30" rx="1"/><rect x="18" y="14" width="8" height="26" rx="1"/><path d="M29 16l7-2 7 25-7 2z"/>',
+    stajnia: '<path d="M13 9v15a11 11 0 0 0 22 0V9"/><path d="M9 9h8M31 9h8"/><circle cx="13" cy="18" r=".6"/><circle cx="35" cy="18" r=".6"/>',
+    ogrod: '<circle cx="24" cy="15" r="4"/><circle cx="24" cy="8" r="3"/><circle cx="31" cy="15" r="3"/><circle cx="17" cy="15" r="3"/><circle cx="24" cy="22" r="3"/><path d="M24 25v17M24 36c-6 0-9-3-9-7M24 33c6 0 9-3 9-7"/>',
+    wieza: '<path d="M14 42V17h20v25M12 17V8h5v4h4V8h6v4h4V8h5v9"/><path d="M21 42v-7a3 3 0 0 1 6 0v7"/><path d="M8 42h32"/>',
+    lochy: '<path d="M24 5v38M5 24h38M10.5 10.5l27 27M37.5 10.5l-27 27"/><path d="M24 13l8 3 3 8-3 8-8 3-8-3-3-8 3-8z"/>',
+  };
+  const icon = id => `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[id]}</svg>`;
+  const STAR = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/></svg>';
+  const eggSvg = (full, cls = 'egg') => `<svg class="${cls}" viewBox="0 0 40 52" aria-hidden="true"><path d="M20 2C9 2 2 20 2 32a18 18 0 0 0 36 0C38 20 31 2 20 2Z" fill="${full ? '#ffc93c' : 'transparent'}" stroke="${full ? '#b4791a' : '#4a5390'}" stroke-width="3"/>${full ? '<path d="M11 24c2-6 5-10 8-12" stroke="#fff3c4" stroke-width="3" fill="none" stroke-linecap="round"/>' : ''}</svg>`;
+
+  // ---------- Pomocnicze ----------
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const rand = n => Math.floor(Math.random() * n);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const hatOf = id => HATS.find(h => h.id === id);
+  const itemOf = id => ITEMS.find(i => i.id === id);
+  const g = (fem, m, f) => fem ? f : m;
+
+  // ---------- Portret podejrzanego ----------
+  const ITEM_ART = {
+    broom: '<path d="M89 56 L79 88" stroke="#8a5a2b" stroke-width="4" stroke-linecap="round"/><path d="M71 86 L87 90 L84 99 L67 96Z" fill="#e0a83a" stroke="#8a5a2b" stroke-width="2" stroke-linejoin="round"/>',
+    key: '<g fill="none" stroke="#a87a0c" stroke-width="4" stroke-linecap="round"><circle cx="83" cy="66" r="7" fill="#ffd34d"/><path d="M83 73 V96 M83 86 h7 M83 93 h6"/></g>',
+    lantern: '<path d="M77 66 q7 -10 14 0" fill="none" stroke="#3a3f63" stroke-width="3"/><rect x="74" y="66" width="20" height="24" rx="3" fill="#ffd95e" stroke="#3a3f63" stroke-width="3"/><path d="M84 72 v12" stroke="#ff8a3d" stroke-width="4" stroke-linecap="round"/><rect x="72" y="89" width="24" height="6" rx="2" fill="#3a3f63"/>',
+    book: '<rect x="71" y="68" width="24" height="28" rx="2" fill="#7b4bd1" stroke="#3a2370" stroke-width="2.5"/><path d="M76 68 V96" stroke="#3a2370" stroke-width="2.5"/><path d="M80 77h11M80 83h11" stroke="#e9dcff" stroke-width="2.5" stroke-linecap="round"/>',
+  };
+  function portrait(s) {
+    const P = PEOPLE[s.p], hat = hatOf(s.hat).color;
+    const ink = '#1d2246';
+    return `<svg viewBox="0 0 100 100" role="img" aria-label="${esc(P.name)}">
+      <circle cx="50" cy="50" r="48" fill="${P.bg}"/>
+      <path d="M16 100 C18 74 33 67 50 67 C67 67 82 74 84 100 Z" fill="${P.shirt}" stroke="rgba(29,34,70,.25)" stroke-width="1.5"/>
+      ${P.longHair ? `<path d="M29 46 C26 66 28 78 33 82 L67 82 C72 78 74 66 71 46 Z" fill="${P.hair}"/>` : ''}
+      <circle cx="50" cy="50" r="20" fill="${P.skin}"/>
+      ${P.beard ? `<path d="M31 52 C33 77 67 77 69 52 C62 61 38 61 31 52Z" fill="#f4f4f4" stroke="#cfcfcf" stroke-width="1"/>` : ''}
+      <circle cx="43" cy="50" r="2.4" fill="${ink}"/><circle cx="57" cy="50" r="2.4" fill="${ink}"/>
+      ${P.beard ? '' : `<path d="M44 58 Q50 63 56 58" stroke="${ink}" stroke-width="2" fill="none" stroke-linecap="round"/>`}
+      ${s.glasses ? `<g fill="rgba(255,255,255,.25)" stroke="${ink}" stroke-width="2.4"><circle cx="43" cy="50" r="6"/><circle cx="57" cy="50" r="6"/><path d="M49 50h2"/></g>` : ''}
+      <path d="M29 42 C29 19 71 19 71 42 Z" fill="${hat}" stroke="${ink}" stroke-width="2"/>
+      <rect x="26" y="38" width="48" height="8" rx="4" fill="${hat}" stroke="${ink}" stroke-width="2"/>
+      <circle cx="50" cy="19" r="5" fill="${hat}" stroke="${ink}" stroke-width="2"/>
+      ${s.scarf ? `<path d="M33 66 C40 72 60 72 67 66 L68 73 C60 79 40 79 32 73 Z" fill="#e8463c" stroke="${ink}" stroke-width="2"/><path d="M58 74 L62 92 L54 92 L52 76 Z" fill="#e8463c" stroke="${ink}" stroke-width="2"/><path d="M40 69v7M47 71v7M55 71v6M54 82h7M55 87h7" stroke="#fff" stroke-width="2.4"/>` : ''}
+      ${ITEM_ART[s.item]}
+    </svg>`;
+  }
+
+  // ---------- Wskazówki ----------
+  // Wskazówka = { t: typ, v: wartość }. Teksty powstają z danych, więc stan da się łatwo zapisać.
+  function fits(c, s) {
+    switch (c.t) {
+      case 'hat': return s.hat === c.v;
+      case 'hatNot': return s.hat !== c.v;
+      case 'gl': return s.glasses === c.v;
+      case 'sc': return s.scarf === c.v;
+      case 'item': return s.item === c.v;
+      case 'itemNot': return s.item !== c.v;
+    }
+  }
+  function clueText(c, level, room) {
+    const w = room || { fem: false };
+    if (level === 1) {
+      switch (c.t) {
+        case 'hat': return `Złodziej miał ${hatOf(c.v).acc} czapkę.`;
+        case 'hatNot': return `Złodziej nie miał ${hatOf(c.v).gen} czapki.`;
+        case 'gl': return c.v ? 'Złodziej miał okulary.' : 'Złodziej nie miał okularów.';
+        case 'sc': return c.v ? 'Złodziej miał szalik.' : 'Złodziej nie miał szalika.';
+        case 'item': return `Złodziej miał ${itemOf(c.v).acc}.`;
+        case 'itemNot': return `Złodziej nie miał ${itemOf(c.v).gen}.`;
+      }
+    }
+    let t;
+    switch (c.t) {
+      case 'hat': t = `W nocy ${g(w.fem, 'widziałem', 'widziałam')} kogoś w ${hatOf(c.v).gen} czapce. Ta osoba niosła złote jajo!`; break;
+      case 'hatNot': t = `Złodziej uciekał bardzo szybko. Ale ${g(w.fem, 'zauważyłem', 'zauważyłam')}, że jego czapka nie była ${hatOf(c.v).nom}.`; break;
+      case 'gl': t = c.v
+        ? `Księżyc świecił jasno. Na nosie złodzieja ${g(w.fem, 'zobaczyłem', 'zobaczyłam')} okulary.`
+        : `${g(w.fem, 'Widziałem', 'Widziałam')} twarz złodzieja z bliska. Nie miał na nosie okularów.`; break;
+      case 'sc': t = c.v
+        ? 'Złodziej miał na szyi długi szalik. Szalik powiewał na wietrze.'
+        : 'Złodziej miał gołą szyję. Nie było na niej szalika.'; break;
+      case 'item': t = `Złodziej trzymał w ręce ${itemOf(c.v).acc}. Potem zniknął za drzwiami.`; break;
+      case 'itemNot': { const it = itemOf(c.v); t = `Złodziej coś trzymał w ręce, ale to ${g(it.fem, 'nie był', 'nie była')} ${it.nom}.`; break; }
+    }
+    return `${w.greet ? w.greet + ' ' : ''}${t}`;
+  }
+  // Pytanie sprawdzające rozumienie. Przy zdaniach przeczących są dwie odpowiedzi,
+  // bo każda inna byłaby też prawdziwa — zostaje tylko ta ze zdania i prawdziwa cecha złodzieja.
+  function buildQuestion(c, culprit) {
+    let q, opts;
+    switch (c.t) {
+      case 'hat': {
+        q = 'Jaką czapkę miał złodziej?';
+        const others = shuffle(HATS.filter(h => h.id !== c.v)).slice(0, 2);
+        opts = [{ label: `${hatOf(c.v).acc} czapkę`, ok: true }, ...others.map(h => ({ label: `${h.acc} czapkę`, ok: false }))];
+        break;
+      }
+      case 'hatNot':
+        q = 'Jakiej czapki złodziej NIE miał?';
+        opts = [{ label: `${hatOf(c.v).gen} czapki`, ok: true }, { label: `${hatOf(culprit.hat).gen} czapki`, ok: false }];
+        break;
+      case 'gl':
+        q = 'Czy złodziej miał okulary?';
+        opts = [{ label: 'Tak, miał okulary.', ok: c.v }, { label: 'Nie, nie miał okularów.', ok: !c.v }];
+        break;
+      case 'sc':
+        q = 'Czy złodziej miał szalik?';
+        opts = [{ label: 'Tak, miał szalik.', ok: c.v }, { label: 'Nie, nie miał szalika.', ok: !c.v }];
+        break;
+      case 'item': {
+        q = 'Co miał złodziej?';
+        const others = shuffle(ITEMS.filter(i => i.id !== c.v)).slice(0, 2);
+        opts = [{ label: itemOf(c.v).acc, ok: true }, ...others.map(i => ({ label: i.acc, ok: false }))];
+        break;
+      }
+      case 'itemNot':
+        q = 'Czego złodziej NIE miał?';
+        opts = [{ label: itemOf(c.v).gen, ok: true }, { label: itemOf(culprit.item).gen, ok: false }];
+        break;
+    }
+    return { q, opts: shuffle(opts) };
+  }
+
+  // ---------- Nowa zagadka ----------
+  function makeCase() {
+    for (let round = 0; round < 200; round++) {
+      const combos = [];
+      for (const h of HATS) for (const gl of [true, false]) for (const sc of [true, false]) for (const it of ITEMS)
+        combos.push({ hat: h.id, glasses: gl, scarf: sc, item: it.id });
+      const picked = shuffle(combos).slice(0, PEOPLE.length);
+      const suspects = PEOPLE.map((_, p) => ({ p, ...picked[p] }));
+      const culprit = rand(suspects.length);
+      const c = suspects[culprit];
+      const pool = [
+        { t: 'hat', v: c.hat }, ...HATS.filter(h => h.id !== c.hat).map(h => ({ t: 'hatNot', v: h.id })),
+        { t: 'gl', v: c.glasses }, { t: 'sc', v: c.scarf },
+        { t: 'item', v: c.item }, ...ITEMS.filter(i => i.id !== c.item).map(i => ({ t: 'itemNot', v: i.id })),
+      ];
+      const matching = set => suspects.filter(s => set.every(cl => fits(cl, s)));
+      for (let tryNo = 0; tryNo < 300; tryNo++) {
+        const clues = shuffle(pool).slice(0, ROOMS.length);
+        // Każda wskazówka musi coś wnosić, żadna sama nie rozwiązuje zagadki, a razem wskazują jedną osobę.
+        if (!clues.every(cl => matching([cl]).length < suspects.length)) continue;
+        // Bez powtórzeń: „miał niebieską czapkę” wyklucza już „nie miał czerwonej czapki”.
+        const has = t => clues.some(cl => cl.t === t);
+        if ((has('hat') && has('hatNot')) || (has('item') && has('itemNot'))) continue;
+        if (clues.some(cl => matching([cl]).length === 1)) continue;
+        if (matching(clues).length !== 1) continue;
+        // Na początku szukamy trudniejszych zestawów: żadne dwie wskazówki nie wystarczą.
+        if (tryNo < 150) {
+          let pairSolves = false;
+          for (let i = 0; i < clues.length && !pairSolves; i++)
+            for (let j = i + 1; j < clues.length; j++)
+              if (matching([clues[i], clues[j]]).length === 1) { pairSolves = true; break; }
+          if (pairSolves) continue;
+        }
+        return { suspects, culprit, clues };
+      }
+    }
+    throw new Error('Nie udało się ułożyć zagadki');
+  }
+
+  // ---------- Stan ----------
+  let setup = { count: 2, level: 1 };
+  let state = null;   // stan rozgrywki
+  let modal = null;   // otwarte okno
+
+  function newGame(players, level) {
+    const cs = makeCase();
+    state = {
+      screen: 'game', level,
+      players: players.map(n => ({ name: n.name, stars: 0 })),
+      cur: 0, chances: 3,
+      suspects: cs.suspects, culprit: cs.culprit,
+      rooms: ROOMS.map((r, i) => ({ clue: cs.clues[i], visited: false })),
+      crossed: cs.suspects.map(() => false),
+      found: [], result: null,
+    };
+    modal = { kind: 'intro' };
+    render();
+  }
+
+  // ---------- Czytanie na głos (pomoc) ----------
+  const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  function speak(text) {
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'pl-PL'; u.rate = 0.85;
+      const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith('pl'));
+      if (v) u.voice = v;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) { /* brak głosu – trudno */ }
+  }
+
+  // ---------- Rysowanie ----------
+  const curP = () => state.players[state.cur];
+  const chip = (i, extra = '') => `<span class="dot" style="background:${PLAYER_COLORS[i]}"></span>${extra}`;
+
+  function render() {
+    $('setup').hidden = !!state && state.screen !== 'setup';
+    $('game').hidden = !state || state.screen !== 'game';
+    $('end').hidden = !state || state.screen !== 'end';
+    if (state && state.screen === 'game') renderGame();
+    if (state && state.screen === 'end') renderEnd();
+    renderModal();
+  }
+
+  function renderGame() {
+    const p = curP();
+    $('turn').innerHTML = `${chip(state.cur)}<span>Teraz czyta:</span> <b>${esc(p.name)}</b>`;
+    $('players').innerHTML = state.players.map((pl, i) =>
+      `<span class="pchip${i === state.cur ? ' now' : ''}">${chip(i)}${esc(pl.name)} <span class="stars">${STAR}${pl.stars}</span></span>`).join('');
+    $('chances').innerHTML = `<span>Szanse:</span>${[0, 1, 2].map(i => eggSvg(i < state.chances)).join('')}`;
+
+    const left = state.rooms.filter(r => !r.visited).length;
+    $('rooms-left').textContent = left ? `Do odwiedzenia: ${left}` : 'Wszystkie odwiedzone';
+    $('rooms').innerHTML = ROOMS.map((r, i) => {
+      const v = state.rooms[i].visited;
+      return `<button type="button" class="room" data-room="${i}" ${v ? 'disabled' : ''}>
+        <span class="ico">${icon(r.id)}</span>
+        <span><span class="rname">${r.name}</span><br>${v ? '<span class="stamp">Sprawdzone</span>' : `<span class="rwho">${r.who}</span>`}</span>
+      </button>`;
+    }).join('');
+
+    const alive = state.crossed.filter(x => !x).length;
+    $('hint').innerHTML = left
+      ? `<b>${esc(p.name)}</b>, wybierz komnatę i posłuchaj świadka.`
+      : `Wszyscy świadkowie już mówili. Popatrzcie do zeszytu i <b>wskażcie złodzieja!</b>`;
+    if (left && alive === 1) $('hint').innerHTML = `W zeszycie została tylko jedna osoba. Może to już czas, żeby <b>wskazać złodzieja?</b>`;
+
+    $('suspects').innerHTML = state.suspects.map((s, i) =>
+      `<button type="button" class="sus${state.crossed[i] ? ' out' : ''}" data-cross="${i}" aria-pressed="${state.crossed[i]}">
+        ${portrait(s)}<span class="sname">${esc(PEOPLE[s.p].name)}</span></button>`).join('');
+
+    $('clues').innerHTML = state.found.length
+      ? state.found.map(ri => `<li><b>${ROOMS[ri].name}:</b>${clueText(state.rooms[ri].clue, 1)}</li>`).join('')
+      : '<li class="empty">Jeszcze nic nie wiemy. Odwiedźcie pierwszą komnatę.</li>';
+
+    $('accuse-btn').classList.toggle('pulse', !left || alive === 1);
+  }
+
+  function renderModal() {
+    const ov = $('overlay'), m = $('modal');
+    if (!modal || !state) { ov.hidden = true; m.innerHTML = ''; return; }
+    ov.hidden = false;
+    const p = curP();
+    const reader = `<span class="reader">${chip(state.cur)}Czyta na głos: <b>${esc(p.name)}</b></span>`;
+
+    if (modal.kind === 'intro') {
+      const text = 'Smoczyca Iskra płacze. Ze skarbca zniknęło złote jajo! Pomóżcie mi znaleźć złodzieja.';
+      m.innerHTML = `
+        <div class="mhead"><span class="ico">${eggSvg(true)}</span><div><h2>Smoczyca Iskra</h2><p>Mama złotego jaja</p></div></div>
+        ${reader}
+        <div class="bubble">${text}</div>
+        <div class="row">
+          ${canSpeak ? `<button type="button" class="soft" data-say="${esc(text)}">Przeczytaj mi</button>` : '<span></span>'}
+          <button type="button" class="big" data-act="close">Szukamy złodzieja!</button>
+        </div>`;
+      return;
+    }
+
+    if (modal.kind === 'room') {
+      const r = ROOMS[modal.room], c = state.rooms[modal.room].clue;
+      const text = clueText(c, state.level, r);
+      const head = `<div class="mhead"><span class="ico">${icon(r.id)}</span><div><h2>${r.name}</h2><p>Świadek: ${r.who}</p></div></div>`;
+      if (modal.step === 'read') {
+        m.innerHTML = `${head}${reader}
+          <div class="bubble">${esc(text)}</div>
+          <div class="row">
+            ${canSpeak ? `<button type="button" class="soft" data-say="${esc(text)}">Przeczytaj mi (bez gwiazdki)</button>` : '<span></span>'}
+            <button type="button" class="big" data-act="read-done">Przeczytane!</button>
+          </div>`;
+      } else if (modal.step === 'ask') {
+        m.innerHTML = `${head}
+          <div class="bubble small">${esc(text)}</div>
+          <div class="q">${modal.q}</div>
+          <div class="opts">${modal.opts.map((o, k) =>
+            `<button type="button" class="opt${modal.wrongPick === k ? ' wrong' : ''}" data-ans="${k}">${o.label}</button>`).join('')}</div>
+          ${modal.wrongPick != null ? '<div class="msg bad">Jeszcze raz! Przeczytaj dymek uważnie.</div>' : ''}`;
+      } else {
+        m.innerHTML = `${head}
+          <div class="msg good">${modal.star ? `<span class="stars" style="font-size:22px">${STAR}+1</span>` : ''}
+            <span>Brawo, ${esc(p.name)}!<br><span class="note">Wskazówka jest już w zeszycie. Skreślcie osoby, które do niej nie pasują.</span></span></div>
+          <div class="bubble small">${esc(clueText(c, 1))}</div>
+          <div class="row"><span></span><button type="button" class="big" data-act="next">Dalej</button></div>`;
+      }
+      return;
+    }
+
+    if (modal.kind === 'accuse') {
+      if (modal.sel == null) {
+        m.innerHTML = `
+          <div class="mhead"><span class="ico">${eggSvg(true)}</span><div><h2>Kto zabrał złote jajo?</h2><p>Wybiera: ${esc(p.name)}. Pomyłka kosztuje jedną szansę.</p></div></div>
+          <div class="pick">${state.suspects.map((s, i) =>
+            `<button type="button" class="sus${state.crossed[i] ? ' out' : ''}" data-pick="${i}">${portrait(s)}<span class="sname">${esc(PEOPLE[s.p].name)}</span></button>`).join('')}</div>
+          <div class="row"><button type="button" class="soft" data-act="close">Wróć do szukania</button><span></span></div>`;
+      } else {
+        const s = state.suspects[modal.sel], P = PEOPLE[s.p];
+        m.innerHTML = `
+          <div class="confirm">${portrait(s)}<div class="q">Czy na pewno to ${g(P.fem, 'on', 'ona')}? ${esc(P.name)}?</div></div>
+          <div class="row">
+            <button type="button" class="soft" data-act="unpick">Nie, wybiorę kogoś innego</button>
+            <button type="button" class="big" data-act="confirm">Tak, to ${g(P.fem, 'on', 'ona')}!</button>
+          </div>`;
+      }
+      return;
+    }
+
+    if (modal.kind === 'wrong') {
+      const s = state.suspects[modal.who], P = PEOPLE[s.p];
+      const proof = state.found.map(ri => state.rooms[ri].clue).find(c => !fits(c, s));
+      m.innerHTML = `
+        <div class="confirm">${portrait(s)}<div><div class="q">${esc(P.name)}: „To nie ja!”</div>
+          <p style="margin:6px 0 0;font-size:19px">${proof
+            ? `Spójrzcie na wskazówkę: <b>${clueText(proof, 1)}</b>`
+            : 'Zbierzcie więcej wskazówek, zanim znowu wskażecie złodzieja.'}</p></div></div>
+        <div class="msg bad">${state.chances > 0 ? `Zostały szanse: ${state.chances}.` : 'To była ostatnia szansa.'}</div>
+        <div class="row"><span></span><button type="button" class="big" data-act="after-wrong">Dalej</button></div>`;
+    }
+  }
+
+  function renderEnd() {
+    const s = state.suspects[state.culprit], P = PEOPLE[s.p];
+    const win = state.result === 'win';
+    const ranked = state.players.map((pl, i) => ({ ...pl, i })).sort((a, b) => b.stars - a.stars);
+    $('end').innerHTML = `
+      ${eggSvg(true, 'bigegg')}
+      <h1>${win ? 'Brawo, detektywi!' : 'Złodziej tym razem uciekł…'}</h1>
+      <p class="lead">${win
+        ? 'Złote jajo wróciło do Smoczycy Iskry. Teraz cała rodzina smoków może spać spokojnie!'
+        : 'Ale Smoczyca Iskra wie już, kto to był. Następnym razem na pewno złapiecie złodzieja!'}</p>
+      <div class="reveal">${portrait(s)}<div>
+        <h2>To ${g(P.fem, 'był', 'była')} ${esc(P.name)}!</h2>
+        <p>„${P.motive}”</p></div></div>
+      <div class="eyebrow">Gwiazdki za czytanie</div>
+      <div class="scores">${ranked.map(pl => `<span class="pchip">${chip(pl.i)}${esc(pl.name)} <span class="stars">${STAR}${pl.stars}</span></span>`).join('')}</div>
+      <div class="row" style="justify-content:center">
+        <button type="button" class="ghost" data-act="to-setup">Zmień graczy</button>
+        <button type="button" class="big" data-act="again">Nowa zagadka</button>
+      </div>`;
+  }
+
+  // ---------- Akcje ----------
+  function nextPlayer() { state.cur = (state.cur + 1) % state.players.length; }
+
+  document.addEventListener('click', e => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    const d = t.dataset;
+
+    if (d.count) {
+      setup.count = +d.count;
+      document.querySelectorAll('#count-seg button').forEach(b => b.setAttribute('aria-pressed', b === t));
+      document.querySelectorAll('.name-row').forEach(r => { r.hidden = +r.dataset.row >= setup.count; });
+      return;
+    }
+    if (d.level) {
+      setup.level = +d.level;
+      document.querySelectorAll('#level-seg button').forEach(b => b.setAttribute('aria-pressed', b === t));
+      return;
+    }
+    if (t.id === 'start-btn') {
+      const players = [];
+      for (let i = 0; i < setup.count; i++) players.push({ name: $('name-' + i).value.trim() || `Detektyw ${i + 1}` });
+      newGame(players, setup.level);
+      return;
+    }
+    if (d.say) { speak(d.say); if (modal && modal.kind === 'room') modal.usedHelp = true; return; }
+
+    if (!state) return;
+
+    if (d.room != null) {
+      const i = +d.room;
+      if (state.rooms[i].visited) return;
+      modal = { kind: 'room', room: i, step: 'read', usedHelp: false, wrongPick: null, missed: false };
+    } else if (d.cross != null) {
+      const i = +d.cross; state.crossed[i] = !state.crossed[i];
+    } else if (d.ans != null) {
+      const k = +d.ans;
+      if (modal.opts[k].ok) {
+        const star = !modal.missed && !modal.usedHelp;
+        if (star) curP().stars++;
+        state.rooms[modal.room].visited = true;
+        state.found.push(modal.room);
+        modal.step = 'done'; modal.star = star;
+      } else {
+        modal.wrongPick = k; modal.missed = true;
+      }
+    } else if (d.pick != null) {
+      modal.sel = +d.pick;
+    } else if (t.id === 'accuse-btn') {
+      modal = { kind: 'accuse', sel: null };
+    } else {
+      switch (d.act) {
+        case 'close': modal = null; break;
+        case 'read-done': {
+          const qq = buildQuestion(state.rooms[modal.room].clue, state.suspects[state.culprit]);
+          modal.step = 'ask'; modal.q = qq.q; modal.opts = qq.opts;
+          break;
+        }
+        case 'next': modal = null; nextPlayer(); break;
+        case 'unpick': modal.sel = null; break;
+        case 'confirm':
+          if (modal.sel === state.culprit) { state.result = 'win'; state.screen = 'end'; modal = null; }
+          else { state.chances--; state.crossed[modal.sel] = true; modal = { kind: 'wrong', who: modal.sel }; }
+          break;
+        case 'after-wrong':
+          modal = null;
+          if (state.chances <= 0) { state.result = 'lose'; state.screen = 'end'; } else nextPlayer();
+          break;
+        case 'again': newGame(state.players.map(p => ({ name: p.name })), state.level); return;
+        case 'to-setup': state = null; modal = null; break;
+        default: return;
+      }
+    }
+    if (canSpeak) try { speechSynthesis.cancel(); } catch (err) {}
+    render();
+    if (state && state.screen === 'end') window.scrollTo({ top: 0 });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal && (modal.kind === 'accuse' || modal.kind === 'intro')) { modal = null; render(); }
+  });
+
+  // ---------- Start (z zachowaniem stanu przy aktualizacji strony) ----------
+  const hot = window.claude && window.claude.hot;
+  if (hot && hot.snapshot) hot.snapshot(() => ({ setup, state, modal }));
+  function start(data) {
+    if (data && data.state) { setup = data.setup || setup; state = data.state; modal = data.modal || null; }
+    render();
+  }
+  if (hot && hot.ready) hot.ready(start); else start(hot && hot.data ? hot.data : {});
+})();
+</script>
